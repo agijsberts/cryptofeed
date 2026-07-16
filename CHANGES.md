@@ -1,5 +1,10 @@
 ## Changelog
 
+### 2.4.x
+ * Bugfix: Work around OKX exception
+ * Bugfix: fix handling of unsupported BitMex `typ`
+ * Bugfix: fix SetupTools configuration in `pyproject.toml` to include nested directories
+
 ### 2.4.1 (2025-02-08)
  * Update: Added `is_data_json` to `write()` in `HTTPSync` from `connection.py` to support JSON payloads (#1071)
  * Bugfix: Handle empty nextFundingRate in OKX

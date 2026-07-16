@@ -57,6 +57,7 @@ class Bitmex(Feed, BitmexRestMixin):
                 stype = SPOT
             else:
                 LOG.info('Unsupported type %s for instrument %s', entry['typ'], entry['symbol'])
+                continue
 
             s = Symbol(base, quote, type=stype, expiry_date=entry.get('expiry'))
             if s.normalized not in ret:

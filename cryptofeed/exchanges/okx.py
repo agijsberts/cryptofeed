@@ -68,6 +68,8 @@ class OKX(Feed, OKXRestMixin):
                     base = e['baseCcy']
                     quote = e['quoteCcy']
                 elif stype == FUTURES:
+                    if not e['instId']:
+                        continue
                     base, quote, expiry = e['instId'].split("-")
                 elif stype == OPTION:
                     base, quote, expiry, strike, otype = e['instId'].split("-")
