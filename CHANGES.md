@@ -4,6 +4,8 @@
  * Bugfix: Work around OKX exception
  * Bugfix: fix handling of unsupported BitMex `typ`
  * Bugfix: fix SetupTools configuration in `pyproject.toml` to include nested directories
+ * Bugfix: added `get_or_create_event_loop` to replace deprecated `asyncio.get_event_loop`
+ * Bugfix: fix BinanceFutures to use `public` path in the `wss` address for L2_BOOK
 
 ### 2.4.1 (2025-02-08)
  * Update: Added `is_data_json` to `write()` in `HTTPSync` from `connection.py` to support JSON payloads (#1071)

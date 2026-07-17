@@ -40,6 +40,9 @@ async def aio_task():
 
 
 def main():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
     f = FeedHandler()
     f.run(start_loop=False)
 
@@ -48,7 +51,6 @@ def main():
     f.add_feed(Coinbase(symbols=['BTC-USD'], channels=[TRADES], callbacks={TRADES: trade}))
     f.add_feed(Coinbase(subscription={L2_BOOK: ['BTC-USD', 'ETH-USD'], TRADES: ['ETH-USD', 'BTC-USD']}, callbacks={TRADES: trade, L2_BOOK: book}))
 
-    loop = asyncio.get_event_loop()
     loop.create_task(aio_task())
     loop.run_forever()
 

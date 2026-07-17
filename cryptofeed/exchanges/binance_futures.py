@@ -6,12 +6,12 @@ associated with this software.
 '''
 from decimal import Decimal
 import logging
-from typing import Tuple, Dict
+from typing import Dict, Union, Tuple
 
 from yapic import json
 
 from cryptofeed.connection import AsyncConnection, HTTPPoll, RestEndpoint, Routes, WebsocketEndpoint
-from cryptofeed.defines import BALANCES, BINANCE_FUTURES, BUY, FUNDING, LIMIT, LIQUIDATIONS, MARKET, OPEN_INTEREST, ORDER_INFO, POSITIONS, SELL
+from cryptofeed.defines import BALANCES, BINANCE_FUTURES, BUY, CANDLES, FUNDING, L2_BOOK, LIMIT, LIQUIDATIONS, MARKET, OPEN_INTEREST, ORDER_INFO, POSITIONS, SELL
 from cryptofeed.exchanges.binance import Binance
 from cryptofeed.exchanges.mixins.binance_rest import BinanceFuturesRestMixin
 from cryptofeed.types import Balance, OpenInterest, OrderInfo, Position
@@ -23,6 +23,8 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
     id = BINANCE_FUTURES
     websocket_endpoints = [WebsocketEndpoint('wss://fstream.binance.com', sandbox='wss://stream.binancefuture.com', options={'compression': None})]
     rest_endpoints = [RestEndpoint('https://fapi.binance.com', sandbox='https://testnet.binancefuture.com', routes=Routes('/fapi/v1/exchangeInfo', l2book='/fapi/v1/depth?symbol={}&limit={}', authentication='/fapi/v1/listenKey', open_interest='/fapi/v1/openInterest?symbol={}'))]
+
+    websocket_path = '/market'
 
     valid_depths = [5, 10, 20, 50, 100, 500, 1000]
     valid_depth_intervals = {'100ms', '250ms', '500ms'}
@@ -52,6 +54,70 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
         """
         super().__init__(**kwargs)
         self.open_interest_interval = open_interest_interval
+
+    def _address(self) -> Union[str, Dict]:
+        """
+        Binance has a 200 pair/stream limit per connection, so we need to break the address
+        down into multiple connections if necessary. Because the key is currently not used
+        for the address dict, we can just set it to the last used stream, since this will be
+        unique.
+
+        The generic connect method supplied by Feed will take care of creating the
+        correct connection objects from the addresses.
+        """
+        # if self.requires_authentication:
+        #     address = self.address
+        #     address += '/ws/' + listen_key
+        # else:
+        #     address = self.address
+        #     address += '/stream?streams='
+        is_any_private = any(self.is_authenticated_channel(chan) for chan in self.subscription)
+        is_any_public = any(not self.is_authenticated_channel(chan) for chan in self.subscription)
+        if is_any_private and is_any_public:
+            raise ValueError("Private channels should be subscribed in separate feeds vs public channels")
+        if all(self.is_authenticated_channel(chan) for chan in self.subscription):
+            listen_key = self._generate_token()
+            return self.address + '/ws/' + listen_key
+
+        public_subs = []
+        market_subs = []
+
+        for chan in self.subscription:
+            normalized_chan = self.exchange_channel_to_std(chan)
+            if normalized_chan == OPEN_INTEREST:
+                continue
+            if self.is_authenticated_channel(normalized_chan):
+                continue
+
+            subs = market_subs
+            stream = chan
+            if normalized_chan == CANDLES:
+                stream = f"{chan}{self.candle_interval}"
+            elif normalized_chan == L2_BOOK:
+                stream = f"{chan}@{self.depth_interval}"
+                subs = public_subs
+
+            for pair in self.subscription[chan]:
+                # for everything but premium index the symbols need to be lowercase.
+                if pair.startswith("p"):
+                    if normalized_chan != CANDLES:
+                        raise ValueError("Premium Index Symbols only allowed on Candle data feed")
+                else:
+                    pair = pair.lower()
+                subs.append(f"{pair}@{stream}")
+
+        LOG.critical('market subs: %s', market_subs)
+        LOG.critical('public subs: %s', public_subs)
+
+        def split_list(_list: list, n: int):
+            for i in range(0, len(_list), n):
+                yield _list[i:i + n]
+
+        subs = [self.address + '/market/stream?streams=' + '/'.join(chunk) for chunk in split_list(market_subs, self.per_connection_limit)]
+        subs += [self.address + '/public/stream?streams=' + '/'.join(chunk) for chunk in split_list(public_subs, self.per_connection_limit)]
+
+        LOG.critical('subs: %s', subs)
+        return subs
 
     def _connect_rest(self):
         ret = []

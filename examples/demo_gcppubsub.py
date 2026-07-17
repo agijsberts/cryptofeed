@@ -72,6 +72,9 @@ async def start_subscriber(topic):
 
 
 def main():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
     f = FeedHandler()
 
     trades = TradeGCPPubSub()
@@ -82,7 +85,6 @@ def main():
 
     # Have the client run forever, pulling messages from subscription_path,
     # passing them to the specified callback function
-    loop = asyncio.get_event_loop()
     loop.create_task(start_subscriber(trades.topic))
     loop.run_forever()
 

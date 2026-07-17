@@ -19,17 +19,18 @@ f = FeedHandler()
 
 
 def stop():
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     loop.stop()
 
 
 def add_new_feed():
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     f.add_feed(Coinbase(symbols=['ETH-USD'], channels=[TRADES], callbacks={TRADES: trade}), loop=loop)
 
 
 def main():
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     f.add_feed(Coinbase(symbols=['BTC-USD'], channels=[TRADES], callbacks={TRADES: trade}))
     f.run(start_loop=False)
 

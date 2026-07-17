@@ -56,7 +56,7 @@ class KafkaCallback(BackendQueue):
 
     async def _connect(self):
         if not self.producer:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             try:
                 config_keys = ', '.join([k for k in self.producer_config.keys()])
                 LOG.info(f'{self.__class__.__name__}: Configuring AIOKafka with the following parameters: {config_keys}')

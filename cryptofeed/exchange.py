@@ -4,7 +4,6 @@ Copyright (C) 2017-2025 Bryant Moscon - bmoscon@gmail.com
 Please see the LICENSE file for the terms and conditions
 associated with this software.
 '''
-import asyncio
 from decimal import Decimal
 import logging
 from datetime import datetime as dt, timezone
@@ -15,6 +14,7 @@ from cryptofeed.symbols import Symbol, Symbols
 from cryptofeed.connection import HTTPSync, RestEndpoint
 from cryptofeed.exceptions import UnsupportedDataFeed, UnsupportedSymbol, UnsupportedTradingOption
 from cryptofeed.config import Config
+from cryptofeed.util.eventloop import get_or_create_event_loop
 
 
 LOG = logging.getLogger('feedhandler')
@@ -155,11 +155,11 @@ class RestExchange:
     order_options = NotImplemented
 
     def _sync_run_coroutine(self, coroutine):
-        loop = asyncio.get_event_loop()
+        loop = get_or_create_event_loop()
         return loop.run_until_complete(coroutine)
 
     def _sync_run_generator(self, generator: AsyncGenerator):
-        loop = asyncio.get_event_loop()
+        loop = get_or_create_event_loop()
 
         try:
             while True:

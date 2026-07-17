@@ -27,6 +27,7 @@ from cryptofeed.feed import Feed
 from cryptofeed.log import get_logger
 from cryptofeed.nbbo import NBBO
 from cryptofeed.exchanges import EXCHANGE_MAP
+from cryptofeed.util.eventloop import get_or_create_event_loop
 
 
 LOG = logging.getLogger('feedhandler')
@@ -60,6 +61,7 @@ class FeedHandler:
         self.config = Config(config=config)
         self.raw_data_collection = None
         self.running = False
+        self.loop = None
         if raw_data_collection:
             Connection.raw_data_callback = raw_data_collection
             self.raw_data_collection = raw_data_collection
@@ -100,7 +102,7 @@ class FeedHandler:
 
         if self.running:
             if loop is None:
-                loop = asyncio.get_event_loop()
+                loop = self.loop or get_or_create_event_loop()
 
             self.feeds[-1].start(loop)
 
@@ -132,7 +134,8 @@ class FeedHandler:
             a custom exception handler for asyncio
         """
         self.running = True
-        loop = asyncio.get_event_loop()
+        loop = get_or_create_event_loop()
+        self.loop = loop
         # Good to enable when debugging or without code change: export PYTHONASYNCIODEBUG=1)
         # loop.set_debug(True)
 
@@ -162,7 +165,7 @@ class FeedHandler:
     def _stop(self, loop=None):
         self.running = False
         if not loop:
-            loop = asyncio.get_event_loop()
+            loop = self.loop or get_or_create_event_loop()
 
         LOG.info('FH: shutdown connections handlers in feeds')
         for feed in self.feeds:
@@ -197,7 +200,7 @@ class FeedHandler:
     def close(self, loop=None):
         """Stop the asynchronous generators and close the event loop."""
         if not loop:
-            loop = asyncio.get_event_loop()
+            loop = self.loop or get_or_create_event_loop()
 
         LOG.info('FH: stop the AsyncIO loop')
         loop.stop()
