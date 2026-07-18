@@ -106,9 +106,6 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
                     pair = pair.lower()
                 subs.append(f"{pair}@{stream}")
 
-        LOG.critical('market subs: %s', market_subs)
-        LOG.critical('public subs: %s', public_subs)
-
         def split_list(_list: list, n: int):
             for i in range(0, len(_list), n):
                 yield _list[i:i + n]
@@ -116,7 +113,6 @@ class BinanceFutures(Binance, BinanceFuturesRestMixin):
         subs = [self.address + '/market/stream?streams=' + '/'.join(chunk) for chunk in split_list(market_subs, self.per_connection_limit)]
         subs += [self.address + '/public/stream?streams=' + '/'.join(chunk) for chunk in split_list(public_subs, self.per_connection_limit)]
 
-        LOG.critical('subs: %s', subs)
         return subs
 
     def _connect_rest(self):
